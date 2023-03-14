@@ -17,7 +17,7 @@ db = mariadb.connect(
       port=3306,
       user="root",
       password="mariadb-dui-api"
-)
+    )
 
 cursor = db.cursor()
 
@@ -39,6 +39,7 @@ async def on_ready():
     cursor = db.cursor()
     cursor.execute("CREATE TABLE IF NOT EXISTS userinfo( id BIGINT UNSIGNED PRIMARY KEY, name VARCHAR(64), tag INTEGER, avatarurl VARCHAR(255));")
     cursor.close()
+    userdata.start()
 
 @tasks.loop(seconds=1)
 async def userdata():
@@ -47,7 +48,7 @@ async def userdata():
     members = client.guilds[0].members
     for i in members:
       cursor = db.cursor()
-      if i.name != "testbot1":
+      if i.id != client.user.id:
         cursor.execute(f"INSERT INTO userinfo (id, name, tag, avatarurl) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE id=?, name=?, tag=?, avatarurl=?",
         (i.id,i.name,int(i.discriminator),str(i.avatar if i.avatar != None else i.default_avatar)), i.id,i.name,int(i.discriminator),str(i.avatar if i.avatar != None else i.default_avatar))
       cursor.close()
