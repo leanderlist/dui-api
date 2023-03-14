@@ -50,7 +50,7 @@ async def userdata():
       cursor = db.cursor()
       if i.id != client.user.id:
         cursor.execute(f"INSERT INTO userinfo (id, name, tag, avatarurl) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE id=?, name=?, tag=?, avatarurl=?",
-        (i.id,i.name,int(i.discriminator),str(i.avatar if i.avatar != None else i.default_avatar)), i.id,i.name,int(i.discriminator),str(i.avatar if i.avatar != None else i.default_avatar))
+        (i.id,i.name,int(i.discriminator),str(i.avatar if i.avatar != None else i.default_avatar), i.id,i.name,int(i.discriminator),str(i.avatar if i.avatar != None else i.default_avatar)))
       cursor.close()
     db.commit()
 
