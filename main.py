@@ -40,4 +40,17 @@ async def on_ready():
     cursor.execute("CREATE TABLE IF NOT EXISTS userinfo( id BIGINT UNSIGNED PRIMARY KEY, name VARCHAR(64), tag INTEGER, avatarurl VARCHAR(255));")
     cursor.close()
 
+@tasks.loop(seconds=1)
+async def userdata():
+    global db
+
+    members = client.guilds[0].members
+    for i in members:
+      cursor = db.cursor()
+      if i.name != "testbot1":
+        cursor.execute(f"INSERT INTO userinfo (id, name, tag, avatarurl) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE id=?, name=?, tag=?, avatarurl=?",
+        (i.id,i.name,int(i.discriminator),str(i.avatar if i.avatar != None else i.default_avatar)), i.id,i.name,int(i.discriminator),str(i.avatar if i.avatar != None else i.default_avatar))
+      cursor.close()
+    db.commit()
+
 client.run(config['token'])
