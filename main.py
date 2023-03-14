@@ -29,6 +29,15 @@ async def on_ready():
     print(f'{client.user} is now online!')
     
     cursor.execute("CREATE DATABASE IF NOT EXISTS data;")
+    db = mariadb.connect(
+      host="db",
+      port=3306,
+      user="root",
+      password="mariadb-dui-api",
+      database="data"
+    )
+    cursor = db.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS userinfo( id BIGINT UNSIGNED PRIMARY KEY, name VARCHAR(64), tag INTEGER, avatarurl VARCHAR(255));")
     cursor.close()
 
 client.run(config['token'])
