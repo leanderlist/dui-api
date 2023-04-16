@@ -35,12 +35,13 @@ async def on_ready():
       host="db",
       port=3306,
       user="root",
-      password="mariadb-dui-api",
+      password="NathanIstCool",
       database="data"
     )
     cursor = db.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS spotifyactivity(trackid VARCHAR(25) PRIMARY KEY, songname VARCHAR(255), artists VARCHAR(255), albumcover VARCHAR(255), album VARCHAR(255), songurl VARCHAR(255), startedplaying BIGINT);")
-    cursor.execute("CREATE TABLE IF NOT EXISTS userinfo(id BIGINT UNSIGNED PRIMARY KEY, name VARCHAR(64), tag INTEGER, status VARCHAR(15), avatar VARCHAR(255), banner VARCHAR(255), creationdate DATE, trackid VARCHAR(25), FOREIGN KEY (trackid) REFERENCES spotifyactivity(trackid));")
+    cursor.execute("CREATE TABLE IF NOT EXISTS userinfo(id BIGINT UNSIGNED PRIMARY KEY, name VARCHAR(64), tag INTEGER, status VARCHAR(15), avatar VARCHAR(255), banner VARCHAR(255), creationdate DATE);")
+    cursor.execute("CREATE TABLE IF NOT EXISTS spotifyactivity(trackid VARCHAR(25), userid BIGINT UNSIGNED, songname VARCHAR(255), artists VARCHAR(255), albumcover VARCHAR(255), album VARCHAR(255), songurl VARCHAR(255), startedplaying BIGINT, PRIMARY KEY (trackid, userid), FOREIGN KEY (userid) REFERENCES userinfo(id));")
+    cursor.execute("CREATE TABLE IF NOT EXISTS playingactivity(gamename VARCHAR(255), userid BIGINT UNSIGNED, state VARCHAR(255), gamedetails VARCHAR(255), startedplaying BIGINT, large_image_url VARCHAR(255), small_image_url VARCHAR(255), PRIMARY KEY (gamename, userid), FOREIGN KEY (userid) REFERENCES userinfo(id));")
     cursor.close()
     userdata.start()
 
@@ -57,23 +58,21 @@ async def userdata():
       if not i.bot:
         date = datetime.strptime(str(i.created_at)[:10], '%Y-%m-%d')
         user = await client.fetch_user(i.id)
-        #print(i.activities)
         cursor.execute("INSERT INTO userinfo (id, name, tag, status, avatar, banner, creationdate) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE id=?,name=?,tag=?,status=?,avatar=?,banner=?,creationdate=?",
           (i.id, i.name, int(i.discriminator), str(i.status), str(i.avatar if i.avatar != None else i.default_avatar), str(user.banner), date, i.id, i.name, int(i.discriminator), str(i.status), str(i.avatar if i.avatar != None else i.default_avatar), str(user.banner), date))
-        # PROBLEM wenn mehrere nutzer den selben SONG hören wegen startedplaying
         for a in i.activities:
           if isinstance(a, discord.Spotify):
             artists = a.artists
-
             for artist in artists:
               save_artists += artist+","
             save_artists = save_artists[:-1]
-            
-            cursor.execute("INSERT INTO spotifyactivity (trackid, songname, artists, albumcover, album, songurl, startedplaying) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE trackid=?, songname=?, artists=?, albumcover=?, album=?, songurl=?, startedplaying=?",
-              (a.track_id, a.title, save_artists, a.album_cover_url, a.album, a.track_url, a.start, a.track_id, a.title, save_artists, a.album_cover_url, a.album, a.track_url, a.start))
+            cursor.execute("INSERT INTO spotifyactivity (trackid, userid, songname, artists, albumcover, album, songurl, startedplaying) VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE trackid=?, userid=?, songname=?, artists=?, albumcover=?, album=?, songurl=?, startedplaying=?",
+              (a.track_id, i.id, a.title, save_artists, a.album_cover_url, a.album, a.track_url, a.start, a.track_id, i.id, a.title, save_artists, a.album_cover_url, a.album, a.track_url, a.start))
 
-            
-      
+          if a.type == discord.ActivityType.playing:
+            cursor.execute("INSERT INTO playingactivity(gamename, userid, state, gamedetails, startedplaying, large_image_url, small_image_url) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE gamename=?, userid=?, state=?, gamedetails=?, startedplaying=?, large_image_url=?, small_image_url=?",
+              (a.name, i.id, a.state, a.details, a.start, a.large_image_url, a.small_image_url, a.name, i.id, a.state, a.details, a.start, a.large_image_url, a.small_image_url))
+
       cursor.close()
     db.commit()
 
