@@ -18,7 +18,7 @@ db = mariadb.connect(
       host="db",
       port=3306,
       user="root",
-      password="maria-dui-api"
+      password="NathanIstCool"
 )
 
 cursor = db.cursor()
@@ -35,13 +35,13 @@ async def on_ready():
       host="db",
       port=3306,
       user="root",
-      password="mariadb-dui-api",
+      password="NathanIstCool",
       database="data"
     )
     cursor = db.cursor()
     cursor.execute("CREATE TABLE IF NOT EXISTS userinfo(id BIGINT UNSIGNED PRIMARY KEY, name VARCHAR(64), tag VARCHAR(4), status VARCHAR(15), avatar VARCHAR(255), banner VARCHAR(255), creationdate DATE);")
     cursor.execute("CREATE TABLE IF NOT EXISTS spotifyactivity(trackid VARCHAR(25), userid BIGINT UNSIGNED, songname VARCHAR(255), artists VARCHAR(255), albumcover VARCHAR(255), album VARCHAR(255), songurl VARCHAR(255), startedplaying BIGINT, PRIMARY KEY (userid), FOREIGN KEY (userid) REFERENCES userinfo(id) ON DELETE CASCADE);")
-    cursor.execute("CREATE TABLE IF NOT EXISTS playingactivity(name VARCHAR(255), userid BIGINT UNSIGNED, state VARCHAR(255), details VARCHAR(255), startedplaying BIGINT, large_image_url VARCHAR(255), small_image_url VARCHAR(255), PRIMARY KEY (userid), FOREIGN KEY (userid) REFERENCES userinfo(id) ON DELETE CASCADE);")
+    cursor.execute("CREATE TABLE IF NOT EXISTS playingactivity(name VARCHAR(255), userid BIGINT UNSIGNED, state VARCHAR(255), details VARCHAR(255), startedplaying BIGINT, large_image_url VARCHAR(255), small_image_url VARCHAR(255), PRIMARY KEY (userid, name), FOREIGN KEY (userid) REFERENCES userinfo(id) ON DELETE CASCADE);")
     cursor.execute("CREATE TABLE IF NOT EXISTS watchingactivity(name VARCHAR(255), userid BIGINT UNSIGNED, state VARCHAR(255), details VARCHAR(255), startedwatching BIGINT, large_image_url VARCHAR(255), small_image_url VARCHAR(255), PRIMARY KEY (userid), FOREIGN KEY (userid) REFERENCES userinfo(id) ON DELETE CASCADE);")
     cursor.execute("CREATE TABLE IF NOT EXISTS customactivity(name VARCHAR(255), userid BIGINT UNSIGNED, emoji VARCHAR(255), PRIMARY KEY (userid), FOREIGN KEY (userid) REFERENCES userinfo(id) ON DELETE CASCADE);")
     cursor.close()
@@ -53,7 +53,7 @@ async def on_member_remove(member):
     cursor.execute(f"DELETE FROM userinfo WHERE id = {member.id}")
     db.commit()
     
-@tasks.loop(seconds=3)
+@tasks.loop(seconds=1)
 async def userdata():
     global db
 
@@ -89,10 +89,13 @@ async def userdata():
               (a.track_id, curr_user[0], a.title, save_artists, a.album_cover_url, a.album, a.track_url, a.start, a.track_id, curr_user[0], a.title, save_artists, a.album_cover_url, a.album, a.track_url, a.start))
           
           if a.type == discord.ActivityType.playing:
-            nogame = False
-            cursor.execute("INSERT INTO playingactivity(name, userid, state, details, startedplaying, large_image_url, small_image_url) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=?, userid=?, state=?, details=?, startedplaying=?, large_image_url=?, small_image_url=?",
-              (a.name, curr_user[0], a.state, a.details, a.start, a.large_image_url, a.small_image_url, a.name, curr_user[0], a.state, a.details, a.start, a.large_image_url, a.small_image_url))
-          
+            try:
+              cursor.execute("INSERT INTO playingactivity(name, userid, state, details, startedplaying, large_image_url, small_image_url) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=?, userid=?, state=?, details=?, startedplaying=?, large_image_url=?, small_image_url=?",
+                (a.name, i.id, a.state, a.details, a.start, a.large_image_url, a.small_image_url, a.name, i.id, a.state, a.details, a.start, a.large_image_url, a.small_image_url))
+            except AttributeError:
+              cursor.execute("INSERT INTO playingactivity(name, userid, state, details, startedplaying, large_image_url, small_image_url) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=?, userid=?, state=?, details=?, startedplaying=?, large_image_url=?, small_image_url=?",
+                (a.name, i.id, None, None, a.start, None, None, a.name, i.id, None, None, a.start, None, None))
+
           if a.type == discord.ActivityType.watching:
             nowatching = False
             cursor.execute("INSERT INTO watchingactivity(name, userid, state, details, startedwatching, large_image_url, small_image_url) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE name=?, userid=?, state=?, details=?, startedwatching=?, large_image_url=?, small_image_url=?",
@@ -120,12 +123,26 @@ async def userdata():
                   
         if nospotify:
           cursor.execute(f"DELETE FROM spotifyactivity WHERE userid = {curr_user[0]}")
-        if nogame:
-          cursor.execute(f"DELETE FROM playingactivity WHERE userid = {curr_user[0]}")
         if nowatching:
           cursor.execute(f"DELETE FROM watchingactivity WHERE userid = {curr_user[0]}")
         if nocustom:
           cursor.execute(f"DELETE FROM customactivity WHERE userid = {curr_user[0]}")
+        
+        cursor.execute(f"SELECT * FROM playingactivity WHERE userid = {curr_user[0]}")
+        playingactivities = cursor.fetchall()
+
+        dbactivityname = []
+        for name in playingactivities:
+          dbactivityname.append(name[0])
+        
+        curractivityname = []
+        for activity in curr_user_activities:
+          curractivityname.append(activity.name)
+
+        for name in dbactivityname:
+          if name not in curractivityname:
+            cursor.execute(f"DELETE FROM playingactivity WHERE userid = {curr_user[0]} AND name='{name}';")
+
         
       cursor.close()
     db.commit()
