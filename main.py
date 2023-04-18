@@ -18,7 +18,7 @@ db = mariadb.connect(
       host="db",
       port=3306,
       user="root",
-      password="NathanIstCool"
+      password="mariadb-dui-api"
 )
 
 cursor = db.cursor()
@@ -35,7 +35,7 @@ async def on_ready():
       host="db",
       port=3306,
       user="root",
-      password="NathanIstCool",
+      password="mariadb-dui-api",
       database="data"
     )
     cursor = db.cursor()
