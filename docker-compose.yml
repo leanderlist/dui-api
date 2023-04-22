@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+
+  db:
+    image: mariadb
+    container_name: db
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MARIADB_ROOT_PASSWORD: schueler
+    expose:
+      - 3306
+    networks:
+      - discord-net
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    networks:
+      - discord-net
+    depends_on:
+      - db
+
+  api:
+    build: ./api
+    networks:
+      - discord-net
+    depends_on:
+      - db
+    environment:
+      TOKEN: MTA5ODIxMTc5OTM4MTMxNTY5NQ.G5nWOJ.A0TMCYdVJeY70catYBgm8KDrWkIwfZLOA2mmyQ
+      UPDATE_TIMER: 1
+
+  app:
+    build: ./app
+    ports:
+      - 80:7007
+    networks:
+      - discord-net
+    depends_on:
+      - api
+
+networks:
+  discord-net:
+    external: true
